@@ -444,35 +444,171 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
+/** **************************************************************************************** */
+
+class BaseElement {
+  constructor(obj, selectors) {
+    Object.assign(this, obj, selectors);
+    this.checkOrder();
+  }
+
+  checkOrder() {
+    let prevElOrder = 0;
+    this.selectors.forEach((el) => {
+      if (el.order < prevElOrder) {
+        throw new Error(
+          `Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element`
+        );
+      }
+      prevElOrder = el.order;
+    });
+  }
+}
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  selectors: [],
+
+  privatMethod(prefix, order, type, value, prefixEnd = '') {
+    const newSelectors = [
+      ...this.selectors,
+      { type, value: `${prefix}${value}${prefixEnd}`, order },
+    ];
+    return new BaseElement(this, { selectors: newSelectors });
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    const type = 'element';
+    const prefix = '';
+    const order = 1;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    const type = 'id';
+    const prefix = '#';
+    const order = 2;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    const type = 'class';
+    const prefix = '.';
+    const order = 3;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    const type = 'attr';
+    const prefix = '[';
+    const prefixEnd = ']';
+    const order = 4;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value, prefixEnd);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    const type = 'pseudoClass';
+    const prefix = ':';
+    const order = 5;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const type = 'pseudoElement';
+    const prefix = '::';
+    const order = 6;
+
+    this.validateMetod(type);
+    return this.privatMethod(prefix, order, type, value);
+  },
+
+  validateMetod(selectorType) {
+    const validateArr = ['element', 'id', 'pseudoElement'];
+
+    const validateObj = { element: 0, id: 0, pseudoElement: 0 };
+    this.selectors.forEach((el) => {
+      validateObj[el.type] += 1;
+    });
+    if (validateArr.includes(selectorType) && validateObj[selectorType] > 0) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+  },
+
+  stringify() {
+    return this.selectors.reduce((acc, el) => acc + el.value, '');
+  },
+
+  combine(selector1, combinator, selector2) {
+    return {
+      stringify() {
+        return `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+      },
+    };
   },
 };
+
+/** ******************************************************************************************* */
+
+// Так и не понял почему этот код метода работает некорректно
+// validateMetod(selectorType) {
+//   const validateArr = ['element', 'id', 'pseudoElement'];
+
+//   const validateObj = {};
+//   this.selectors.forEach((el) => {
+//     if (validateObj[el.type] === undefined) {
+//       validateObj[el.type] = 0;
+//     } else {
+//       validateObj[el.type] += 1;
+//     }
+//   });
+//   if (validateArr.includes(selectorType) && validateObj[selectorType] > 0) {
+//     throw new Error(
+//       'Element, id and pseudo-element should not occur more then one time inside the selector'
+//     );
+//   }
+// },
+
+/** ******************************************************************************************* */
+// const cssSelectorBuilder = {
+//   element(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   id(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   class(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   attr(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   pseudoClass(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   pseudoElement(/* value */) {
+//     throw new Error('Not implemented');
+//   },
+
+//   combine(/* selector1, combinator, selector2 */) {
+//     throw new Error('Not implemented');
+//   },
+// };
 
 module.exports = {
   shallowCopy,
